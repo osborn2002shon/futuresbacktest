@@ -1,0 +1,161 @@
+<% content_for :title, "台指期 24H SMA 回測" %>
+
+<main class="app-shell">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <h1>台指期 24H SMA 回測</h1>
+      <p>WTX&amp; 1 分 K 資料，設定完入場與出場SMA會自動回測總損益</p>
+    </div>
+  </header>
+
+  <div class="content">
+    <section class="control-band">
+      <%= form_with url: backtest_path, method: :get, local: true, class: "strategy-form" do %>
+        <div class="field">
+          <%= label_tag :entry_ma, "入場 SMA" %>
+          <%= number_field_tag :entry_ma, @entry_period, min: 2, max: 720, step: 1 %>
+        </div>
+
+        <div class="field">
+          <%= label_tag :exit_ma, "出場 SMA" %>
+          <%= number_field_tag :exit_ma, @exit_period, min: 2, max: 720, step: 1 %>
+        </div>
+
+        <%= button_tag "重新回測", type: :submit, class: "primary-button" %>
+      <% end %>
+
+      <% if @error_message.present? %>
+        <div class="error-box"><%= @error_message %></div>
+      <% end %>
+    </section>
+
+    <% if @market_data.present? %>
+      <% summary = @result[:summary] %>
+
+      <section class="market-strip">
+        <div class="market-item">
+          <span class="label">商品</span>
+          <span class="value"><%= @market_data[:symbol].presence || "--" %></span>
+        </div>
+        <div class="market-item">
+          <span class="label">狀態</span>
+          <span class="value <%= @market_data[:connected] ? "status-ok" : "" %>"><%= @market_data[:connected] ? "Connected" : "Disconnected" %></span>
+        </div>
+        <div class="market-item">
+          <span class="label">K 棒數</span>
+          <span class="value"><%= number_text(@market_data[:bars].length) %></span>
+        </div>
+        <div class="market-item">
+          <span class="label">資料區間</span>
+          <span class="value"><%= time_text(@market_data[:from_taipei]) %> - <%= time_text(@market_data[:to_taipei]) %></span>
+        </div>
+        <div class="market-item">
+          <span class="label">產生時間</span>
+          <span class="value"><%= time_text(@market_data[:generated_at_taipei]) %></span>
+        </div>
+      </section>
+
+      <section class="summary-grid">
+        <article class="metric-card">
+          <span class="label">總損益點數</span>
+          <strong class="<%= summary[:total_points].negative? ? "negative" : "positive" %>"><%= signed_point_text(summary[:total_points]) %></strong>
+        </article>
+        <article class="metric-card">
+          <span class="label">交易次數</span>
+          <strong><%= summary[:total_trades] %></strong>
+        </article>
+        <article class="metric-card">
+          <span class="label">勝率</span>
+          <strong><%= percent_text(summary[:win_rate]) %></strong>
+        </article>
+        <article class="metric-card">
+          <span class="label">平均點數</span>
+          <strong><%= signed_point_text(summary[:average_points]) %></strong>
+        </article>
+        <article class="metric-card">
+          <span class="label">最大回撤</span>
+          <strong class="negative"><%= point_text(summary[:max_drawdown_points]) %></strong>
+        </article>
+      </section>
+
+      <section class="chart-section">
+        <div class="chart-header">
+          <h2>價格與 SMA</h2>
+          <div class="legend">
+            <span class="legend-item"><span class="swatch close"></span>收盤</span>
+            <span class="legend-item"><span class="swatch entry"></span>SMA<%= @entry_period %></span>
+            <span class="legend-item"><span class="swatch exit"></span>SMA<%= @exit_period %></span>
+          </div>
+        </div>
+
+        <%= render "chart", bars: @result[:bars] %>
+      </section>
+
+      <section class="tables-grid">
+        <article class="table-panel">
+          <h2>交易明細</h2>
+          <% if @result[:trades].any? %>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>進場</th>
+                    <th>出場</th>
+                    <th>進場價</th>
+                    <th>出場價</th>
+                    <th>持有</th>
+                    <th>損益</th>
+                    <th>原因</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% @result[:trades].each do |trade| %>
+                    <tr>
+                      <td><%= time_text(trade[:entry_time]) %></td>
+                      <td><%= time_text(trade[:exit_time]) %></td>
+                      <td><%= number_text(trade[:entry_price]) %></td>
+                      <td><%= number_text(trade[:exit_price]) %></td>
+                      <td><%= trade[:minutes_held] %> 分</td>
+                      <td class="<%= trade[:points].negative? ? "negative" : "positive" %>"><%= signed_point_text(trade[:points]) %></td>
+                      <td><%= trade[:reason] %></td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% else %>
+            <div class="empty-state">這 24 小時內沒有符合條件的交易。</div>
+          <% end %>
+        </article>
+
+        <article class="table-panel">
+          <h2>最近分 K</h2>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>時間</th>
+                  <th>收盤</th>
+                  <th>SMA<%= @entry_period %></th>
+                  <th>SMA<%= @exit_period %></th>
+                  <th>訊號</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @result[:bars].last(80).each do |bar| %>
+                  <tr>
+                    <td><%= time_text(bar[:bar_start_taipei]) %></td>
+                    <td><%= number_text(bar[:close]) %></td>
+                    <td><%= number_text(bar[:entry_sma], precision: 1) %></td>
+                    <td><%= number_text(bar[:exit_sma], precision: 1) %></td>
+                    <td><%= signal_text(bar[:signal]) %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    <% end %>
+  </div>
+</main>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Taifex Backtester" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="application-name" content="Taifex Backtester">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <style>
+      <%= render "layouts/styles" %>
+    </style>
+  </head>
+
+  <body>
+    <%= yield %>
+  </body>
+</html>

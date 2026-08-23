@@ -1,0 +1,24 @@
+<% chart = price_chart_data(bars) %>
+
+<% if chart[:empty] %>
+  <div class="empty-state">沒有可繪製的分 K 資料。</div>
+<% else %>
+  <div class="chart-wrap">
+    <svg class="price-chart" viewBox="0 0 960 320" role="img" aria-label="價格與 SMA 走勢">
+      <% chart[:y_labels].each do |label| %>
+        <line class="grid-line" x1="36" x2="924" y1="<%= label[:y] %>" y2="<%= label[:y] %>"></line>
+        <text class="axis-label" x="6" y="<%= label[:y] + 4 %>"><%= label[:text] %></text>
+      <% end %>
+
+      <polyline class="line-entry" points="<%= chart[:entry_points] %>"></polyline>
+      <polyline class="line-exit" points="<%= chart[:exit_points] %>"></polyline>
+      <polyline class="line-close" points="<%= chart[:close_points] %>"></polyline>
+
+      <% chart[:markers].each do |marker| %>
+        <circle class="marker-<%= marker[:signal] %>" cx="<%= marker[:x] %>" cy="<%= marker[:y] %>" r="5">
+          <title><%= marker[:label] %></title>
+        </circle>
+      <% end %>
+    </svg>
+  </div>
+<% end %>
